@@ -5,6 +5,7 @@ module Config where
 
 import           Control.Exception                    (throwIO)
 import           Control.Monad.Except                 (ExceptT, MonadError)
+import           Control.Monad.Catch                  (MonadCatch, MonadThrow)
 import           Control.Monad.Logger                 (runNoLoggingT,
                                                        runStdoutLoggingT)
 import           Control.Monad.Reader                 (MonadIO, MonadReader,
@@ -19,7 +20,7 @@ import           Network.Wai                          (Middleware)
 import           Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import           Servant                              (ServantErr)
 import           System.Environment                   (lookupEnv)
-
+import           Safe                        (readMay)
 -- | This type represents the effects we want to have for our application.
 -- We wrap the standard Servant monad with 'ReaderT Config', which gives us
 -- access to the application configuration using the 'MonadReader'
@@ -31,7 +32,7 @@ newtype App a
     = App
     { runApp :: ReaderT Config (ExceptT ServantErr IO) a
     } deriving ( Functor, Applicative, Monad, MonadReader Config,
-                 MonadError ServantErr, MonadIO)
+                 MonadError ServantErr, MonadIO, MonadCatch, MonadThrow)
 
 -- | The Config for our application is (for now) the 'Environment' we're
 -- running in and a Persistent 'ConnectionPool'.
@@ -106,4 +107,31 @@ envPool Production = 8
 -- | A basic 'ConnectionString' for local/test development. Pass in either
 -- @""@ for 'Development' or @"test"@ for 'Test'.
 connStr :: BS.ByteString -> ConnectionString
-connStr sfx = "host=localhost dbname=perservant" <> sfx <> " user=test password=test port=5432"
+connStr sfx = "host=localhost dbname=perservant" <> sfx <> " user=postgres password=panda port=5432"
+
+
+
+getConfig :: IO Config
+getConfig = do
+  env  <- lookupSetting "ENV" Development
+  pool <- makePool env
+  return $ Config { getPool = pool, getEnv = env }
+
+-- | Looks up a setting in the environment, with a provided default, and
+-- 'read's that information into the inferred type.
+lookupSetting :: Read a => String -> a -> IO a
+lookupSetting env def = do
+    maybeValue <- lookupEnv env
+    case maybeValue of
+        Nothing ->
+            return def
+        Just str ->
+            maybe (handleFailedRead str) return (readMay str)
+  where
+    handleFailedRead str =
+        error $ mconcat
+            [ "Failed to read [["
+            , str
+            , "]] for environment variable "
+            , env
+            ]

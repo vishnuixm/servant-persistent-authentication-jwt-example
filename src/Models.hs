@@ -1,3 +1,4 @@
+
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE EmptyDataDecls             #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -19,14 +20,22 @@ import           Database.Persist.Sql
 import           Database.Persist.TH  (mkMigrate, mkPersist, persistLowerCase,
                                        share, sqlSettings)
 import           GHC.Generics         (Generic)
-
+import           Data.Time
 import           Config
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 User json
     name String
     email String
+    UniqueEmail email
+    createdAt UTCTime default=CURRENT_TIMESTAMP
+    updatedAt UTCTime default=CURRENT_TIMESTAMP
+    encryptedPassword String default='yetToSet'
     deriving Show
+Profile json
+    age Int
+    location String
+    userId UserId
 |]
 
 doMigrations :: SqlPersistT IO ()

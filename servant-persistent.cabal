@@ -17,19 +17,19 @@ source-repository head
     location:
         https://www.github.com/parsonsmatt/servant-persistent
 
-executable perservant
+executable authservant
     main-is:
         Main.hs
     build-depends:
-        base >=4.7 && <4.9
-      , servant-persistent 
+        base >= 4.7 && < 5
+      , servant-persistent
       , persistent-postgresql
       , wai
       , warp
       , monad-logger
       , safe
     hs-source-dirs:
-        app   
+        app
     default-language:
         Haskell2010
 
@@ -43,8 +43,8 @@ library
       , Models
       , Api
       , Api.User
-    build-depends: 
-        base >= 4.7 && < 4.9
+    build-depends:
+        base >= 4.7 && < 5
       , aeson
       , bytestring
       , monad-control
@@ -53,14 +53,22 @@ library
       , persistent
       , persistent-postgresql
       , persistent-template
-      , servant >= 0.7 && < 0.8
-      , servant-js >= 0.7 && < 0.8
-      , servant-server >= 0.7 && < 0.8
+      , servant
+      , servant-js
+      , servant-server
       , transformers
       , wai
       , wai-extra
       , warp
-
+      , exceptions
+      , fast-logger
+      , time
+      , validation
+      , lens
+      , safe
+      , text
+      , jwt
+      , containers
 
 test-suite servant-persistent-test
     type:

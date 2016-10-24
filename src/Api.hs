@@ -10,19 +10,20 @@ import           Control.Monad.Reader.Class
 import           Data.Int                    (Int64)
 import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
                                               selectFirst, selectList, (==.))
-import           Network.Wai                 (Application)
+import           Network.Wai                 (Application, Request)
 import           Servant
-
 import           Config                      (App (..), Config (..))
 import           Models
-
 import           Api.User
+import Servant.Server.Experimental.Auth (AuthHandler, AuthServerData,
+                                         mkAuthHandler)
+import Servant.Server.Experimental.Auth()
 
 -- | This is the function we export to run our 'UserAPI'. Given
 -- a 'Config', we return a WAI 'Application' which any WAI compliant server
 -- can run.
-userApp :: Config -> Application
-userApp cfg = serve (Proxy :: Proxy UserAPI) (appToServer cfg)
+--userApp :: Config -> Application
+--userApp cfg = serve (Proxy :: Proxy UserAPI) (appToServer cfg)
 
 -- | This functions tells Servant how to run the 'App' monad with our
 -- 'server' function.
@@ -34,6 +35,7 @@ appToServer cfg = enter (convertApp cfg) userServer
 -- application. The ':~>' type is a natural transformation, or, in
 -- non-category theory terms, a function that converts two type
 -- constructors without looking at the values in the types.
+
 convertApp :: Config -> App :~> ExceptT ServantErr IO
 convertApp cfg = Nat (flip runReaderT cfg . runApp)
 
@@ -53,8 +55,13 @@ type AppAPI = UserAPI :<|> Raw
 appApi :: Proxy AppAPI
 appApi = Proxy
 
+genAuthServerContext :: Context (AuthHandler Request User ': '[])
+genAuthServerContext = authHandler :. EmptyContext
+
+
+
 -- | Finally, this function takes a configuration and runs our 'UserAPI'
 -- alongside the 'Raw' endpoint that serves all of our files.
 app :: Config -> Application
 app cfg =
-    serve appApi (appToServer cfg :<|> files)
+    serveWithContext appApi genAuthServerContext (appToServer cfg :<|> files)
