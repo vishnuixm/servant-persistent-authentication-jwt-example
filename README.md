@@ -1,3 +1,3 @@
 # servant-authentication
 
-implementing servant authentication using persistent as database layer
+implemented POC with minimal functionality using persistent as database layer
